@@ -7,10 +7,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
-COPY src/ ./src/
+COPY src/server.py .
 
-# Default port (Railway overrides with $PORT)
-ENV PORT=5002
+# Railway assigns PORT dynamically
+ENV PORT=8080
 
-# Run with gunicorn using shell form to expand $PORT
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 src.server:app
+# Run with gunicorn
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 server:app
