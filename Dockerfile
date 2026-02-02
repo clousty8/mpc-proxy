@@ -9,8 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY src/ ./src/
 
-# Expose port
-EXPOSE 5002
+# Default port (Railway overrides with $PORT)
+ENV PORT=5002
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5002", "--workers", "2", "src.server:app"]
+# Run with gunicorn using shell form to expand $PORT
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 src.server:app
