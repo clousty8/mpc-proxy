@@ -2,6 +2,12 @@
 
 Serveur proxy qui traduit les requêtes MCP (Model Context Protocol / JSON-RPC 2.0) vers l'API REST SanteCall.
 
+## Déploiement
+
+**Production** : https://mpc-proxy-production.up.railway.app
+
+**Endpoint MCP** : `https://mpc-proxy-production.up.railway.app/mcp`
+
 ## Architecture
 
 ```
@@ -60,55 +66,33 @@ chmod +x test_mcp.sh
 
 ## Déploiement sur Railway
 
-### Option 1: Via GitHub (recommandé)
+Le projet est déjà déployé sur Railway et se redéploie automatiquement à chaque push sur `main`.
 
-1. **Pusher sur GitHub:**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit - MCP Proxy SanteCall"
-   git branch -M main
-   git remote add origin https://github.com/VOTRE_USERNAME/mcp-proxy-santecall.git
-   git push -u origin main
-   ```
+- **GitHub** : https://github.com/clousty8/mpc-proxy
+- **Railway** : https://mpc-proxy-production.up.railway.app
 
-2. **Sur Railway:**
-   - Aller sur [railway.app](https://railway.app)
-   - "New Project" → "Deploy from GitHub repo"
-   - Sélectionner `mcp-proxy-santecall`
-   - Railway détecte automatiquement le Dockerfile
+### Variables d'environnement (déjà configurées sur Railway)
 
-3. **Configurer les variables d'environnement sur Railway:**
-   - Dans Settings → Variables, ajouter:
-     - `SANTECALL_API_URL` = `https://hds.santecall.ai/public/lookup`
-     - `SANTECALL_TOKEN` = `votre_token`
-     - `DEFAULT_VOLUBILE_ID` = `votre_volubile_id`
+- `SANTECALL_API_URL` = `https://hds.santecall.ai/public/lookup`
+- `SANTECALL_TOKEN` = token d'authentification
+- `DEFAULT_VOLUBILE_ID` = ID du cabinet par défaut
 
-4. **Récupérer l'URL:**
-   - Railway génère une URL publique (ex: `https://mcp-proxy-santecall-production.up.railway.app`)
-
-### Option 2: Via Railway CLI
+### Redéployer
 
 ```bash
-# Installer Railway CLI
-npm install -g @railway/cli
-
-# Login
-railway login
-
-# Initialiser le projet
-railway init
-
-# Déployer
-railway up
-
-# Voir les logs
-railway logs
+git add .
+git commit -m "Description"
+git push
+# Railway redéploie automatiquement
 ```
+
+### Voir les logs
+
+Sur Railway → ton service → onglet "Logs"
 
 ## Enregistrer sur Reecall
 
-Une fois déployé, enregistrer le MCP sur Reecall:
+Enregistrer le MCP sur Reecall:
 
 ```bash
 curl -X POST "https://newprd.reecall.io/data_next/ai/mcp" \
@@ -117,7 +101,7 @@ curl -X POST "https://newprd.reecall.io/data_next/ai/mcp" \
   -d '{
     "name": "SanteCall Patient Lookup",
     "description": "Recherche de patients dans la base SanteCall",
-    "url": "https://votre-app.up.railway.app/mcp"
+    "url": "https://mpc-proxy-production.up.railway.app/mcp"
   }'
 ```
 
