@@ -110,53 +110,47 @@ def format_patient_response(data):
     if not data:
         return "Aucun patient trouvé avec ce numéro de téléphone."
 
-    # Construire une réponse textuelle structurée
-    lines = []
+    # Construire une réponse concise et naturelle
+    civilite = data.get('civilite', '')
+    prenom = data.get('first_name', '')
+    nom = data.get('last_name', '')
 
-    # Infos patient
-    lines.append(f"=== PATIENT ===")
-    lines.append(f"Civilité: {data.get('civilite', 'Non renseigné')}")
-    lines.append(f"Prénom: {data.get('first_name', 'Non renseigné')}")
-    lines.append(f"Nom: {data.get('last_name', 'Non renseigné')}")
-    lines.append(f"Téléphone: {data.get('phone_number', 'Non renseigné')}")
-    lines.append(f"Email: {data.get('email_patient', 'Non renseigné')}")
-    lines.append(f"Statut cabinet: {data.get('cabinet_status', 'Non renseigné')}")
+    # Phrase d'identification
+    if prenom and nom:
+        response = f"Patient trouvé: {civilite} {prenom} {nom}."
+    else:
+        response = "Patient trouvé dans la base de données."
 
-    # Infos cabinet
-    lines.append(f"\n=== CABINET ===")
-    lines.append(f"Nom: {data.get('cabinet_nom', 'Non renseigné')}")
-    lines.append(f"Adresse: {data.get('cabinet_adresse', 'Non renseigné')}")
-    lines.append(f"Horaires: {data.get('cabinet_horaires_texte', 'Non renseigné')}")
-    if data.get('cabinet_fermeture_exception'):
-        lines.append(f"Fermetures exceptionnelles: {data.get('cabinet_fermeture_exception')}")
-    lines.append(f"Logiciel: {data.get('software_type', 'Non renseigné')}")
-
-    # Praticiens
-    if data.get('patient_prat'):
-        lines.append(f"Praticien du patient: {data.get('patient_prat')}")
-    if data.get('cabinet_prats'):
-        lines.append(f"Praticiens du cabinet: {data.get('cabinet_prats')}")
-
-    # Fonctionnalités disponibles
-    lines.append(f"\n=== FONCTIONNALITÉS ===")
-    lines.append(f"Confirmation RDV: {'Oui' if data.get('confirmation_rdv_enabled') else 'Non'}")
-    lines.append(f"Annulation RDV: {'Oui' if data.get('annulation_rdv_enabled') else 'Non'}")
-    lines.append(f"Prise de RDV: {'Oui' if data.get('prise_rdv_enabled') else 'Non'}")
+    # Email si disponible
+    email = data.get('email_patient', '')
+    if email:
+        response += f" Email: {email}."
 
     # Rendez-vous programmés
     appointments = data.get('scheduled_appointments', [])
     if appointments:
-        lines.append(f"\n=== RENDEZ-VOUS PROGRAMMÉS ({len(appointments)}) ===")
-        for i, appt in enumerate(appointments, 1):
+        response += f" Ce patient a {len(appointments)} rendez-vous programmé(s):"
+        for appt in appointments[:3]:  # Limiter à 3 RDV
             date = appt.get('date', 'Date inconnue')
-            practitioner = appt.get('practitioner_id', 'Praticien inconnu')
-            acte = appt.get('acte_id', 'Acte non précisé')
-            lines.append(f"{i}. {date} - {practitioner} - {acte}")
+            practitioner = appt.get('practitioner_id', '')
+            acte = appt.get('acte_id', '')
+            response += f" - {date} avec {practitioner} pour {acte}."
     else:
-        lines.append(f"\n=== RENDEZ-VOUS PROGRAMMÉS ===")
-        lines.append("Aucun rendez-vous programmé")
+        response += " Ce patient n'a aucun rendez-vous programmé."
 
-    return "\n".join(lines)
+    # Fonctionnalités disponibles
+    features = []
+    if data.get('confirmation_rdv_enabled'):
+        features.append("confirmer un RDV")
+    if data.get('annulation_rdv_enabled'):
+        features.append("annuler un RDV")
+    if data.get('prise_rdv_enabled'):
+        features.append("prendre un nouveau RDV")
+
+    if features:
+        response += f" Actions possibles: {', '.join(features)}."
+
+    return response
 
 
 def handle_initialize(request_id, params):
