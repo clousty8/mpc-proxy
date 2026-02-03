@@ -199,10 +199,16 @@ def handle_tools_call(request_id, params):
             data = call_santecall_api(phone, volubile_id)
             formatted_response = format_patient_response(data)
             logger.info(f"[MCP] search_patient - Succès pour {phone}")
+            logger.info(f"[MCP] Réponse: {formatted_response[:200]}...")
 
+            # Format selon spec MCP 2025-11-25
             return make_jsonrpc_response(request_id, {
-                "content": [{"type": "text", "text": formatted_response}],
-                "isError": False
+                "content": [
+                    {
+                        "type": "text",
+                        "text": formatted_response
+                    }
+                ]
             })
         except Exception as e:
             logger.error(f"[MCP] search_patient - Erreur: {str(e)}")
