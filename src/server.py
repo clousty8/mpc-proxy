@@ -159,6 +159,24 @@ def format_patient_response(data):
     return "\n".join(lines)
 
 
+def handle_initialize(request_id, params):
+    """Gère la requête initialize (handshake MCP)"""
+    client_version = params.get("protocolVersion", "unknown")
+    client_info = params.get("clientInfo", {})
+    logger.info(f"[MCP] initialize - Client: {client_info.get('name', 'unknown')} v{client_info.get('version', 'unknown')}, Protocol: {client_version}")
+
+    return make_jsonrpc_response(request_id, {
+        "protocolVersion": "2025-11-25",
+        "capabilities": {
+            "tools": {}
+        },
+        "serverInfo": {
+            "name": "SanteCall MCP Proxy",
+            "version": "1.2.0"
+        }
+    })
+
+
 def handle_tools_list(request_id):
     """Gère la requête tools/list"""
     logger.info(f"[MCP] tools/list - Retourne {len(TOOLS)} outil(s)")
@@ -210,7 +228,7 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "MCP Proxy SanteCall",
-        "version": "1.1.0"
+        "version": "1.2.0"
     })
 
 
@@ -245,7 +263,9 @@ def mcp_endpoint():
         logger.info(f"[MCP] Méthode: {method}, ID: {request_id}")
 
         # Router vers le bon handler
-        if method == "tools/list":
+        if method == "initialize":
+            response = handle_initialize(request_id, params)
+        elif method == "tools/list":
             response = handle_tools_list(request_id)
         elif method == "tools/call":
             response = handle_tools_call(request_id, params)
