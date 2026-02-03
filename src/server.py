@@ -277,8 +277,12 @@ def mcp_endpoint():
             logger.warning(f"[MCP] Méthode inconnue: {method}")
             response = make_jsonrpc_error(request_id, -32601, f"Method not found: {method}")
 
-        logger.info(f"[HTTP] Réponse envoyée")
-        return jsonify(response)
+        logger.info(f"[HTTP] Réponse envoyée: {response}")
+        # Retourner avec Content-Type explicite selon spec MCP
+        from flask import make_response
+        resp = make_response(jsonify(response))
+        resp.headers['Content-Type'] = 'application/json'
+        return resp
 
     except Exception as e:
         logger.error(f"[HTTP] Erreur interne: {str(e)}")
