@@ -269,6 +269,10 @@ def mcp_endpoint():
             response = handle_tools_list(request_id)
         elif method == "tools/call":
             response = handle_tools_call(request_id, params)
+        elif method.startswith("notifications/"):
+            # Les notifications MCP n'ont pas besoin de réponse
+            logger.info(f"[MCP] Notification reçue: {method} (ignorée)")
+            return "", 204  # No Content
         else:
             logger.warning(f"[MCP] Méthode inconnue: {method}")
             response = make_jsonrpc_error(request_id, -32601, f"Method not found: {method}")
