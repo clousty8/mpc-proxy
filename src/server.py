@@ -3,9 +3,33 @@ MCP Proxy Server - Traduit les requêtes MCP (JSON-RPC 2.0) vers l'API REST Sant
 """
 
 import os
+import sys
+import logging
+from datetime import datetime
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
+
+# Force flush pour Railway
+class FlushHandler(logging.StreamHandler):
+    def emit(self, record):
+        super().emit(record)
+        self.flush()
+
+# Remplacer le handler par défaut
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+logging.root.addHandler(FlushHandler(sys.stdout))
+logging.root.setLevel(logging.INFO)
 
 app = Flask(__name__)
 CORS(app)
@@ -61,6 +85,8 @@ def make_jsonrpc_error(id, code, message):
 
 def call_santecall_api(phone, volubile_id=None):
     """Appelle l'API SanteCall et retourne les données du patient"""
+    logger.info(f"[SanteCall API] Appel avec phone={phone}, volubile_id={volubile_id or DEFAULT_VOLUBILE_ID}")
+
     params = {
         "phone": phone,
         "token": SANTECALL_TOKEN,
@@ -69,9 +95,13 @@ def call_santecall_api(phone, volubile_id=None):
 
     try:
         response = requests.get(SANTECALL_API_URL, params=params, timeout=30)
+        logger.info(f"[SanteCall API] Réponse status={response.status_code}")
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logger.info(f"[SanteCall API] Patient trouvé: {data.get('first_name', 'N/A')} {data.get('last_name', 'N/A')}")
+        return data
     except requests.exceptions.RequestException as e:
+        logger.error(f"[SanteCall API] Erreur: {str(e)}")
         raise Exception(f"Erreur API SanteCall: {str(e)}")
 
 
@@ -131,6 +161,7 @@ def format_patient_response(data):
 
 def handle_tools_list(request_id):
     """Gère la requête tools/list"""
+    logger.info(f"[MCP] tools/list - Retourne {len(TOOLS)} outil(s)")
     return make_jsonrpc_response(request_id, {"tools": TOOLS})
 
 
@@ -139,9 +170,12 @@ def handle_tools_call(request_id, params):
     tool_name = params.get("name")
     arguments = params.get("arguments", {})
 
+    logger.info(f"[MCP] tools/call - Outil: {tool_name}, Arguments: {arguments}")
+
     if tool_name == "search_patient":
         phone = arguments.get("phone")
         if not phone:
+            logger.warning(f"[MCP] search_patient - Numéro de téléphone manquant")
             return make_jsonrpc_response(request_id, {
                 "content": [{"type": "text", "text": "Erreur: Le numéro de téléphone est requis."}],
                 "isError": True
@@ -152,27 +186,31 @@ def handle_tools_call(request_id, params):
         try:
             data = call_santecall_api(phone, volubile_id)
             formatted_response = format_patient_response(data)
+            logger.info(f"[MCP] search_patient - Succès pour {phone}")
 
             return make_jsonrpc_response(request_id, {
                 "content": [{"type": "text", "text": formatted_response}],
                 "isError": False
             })
         except Exception as e:
+            logger.error(f"[MCP] search_patient - Erreur: {str(e)}")
             return make_jsonrpc_response(request_id, {
                 "content": [{"type": "text", "text": f"Erreur lors de la recherche: {str(e)}"}],
                 "isError": True
             })
     else:
+        logger.warning(f"[MCP] Outil inconnu: {tool_name}")
         return make_jsonrpc_error(request_id, -32602, f"Outil inconnu: {tool_name}")
 
 
 @app.route("/", methods=["GET"])
 def health():
     """Health check endpoint"""
+    logger.info(f"[HTTP] GET / - Health check")
     return jsonify({
         "status": "ok",
         "service": "MCP Proxy SanteCall",
-        "version": "1.0.0"
+        "version": "1.1.0"
     })
 
 
@@ -183,19 +221,28 @@ def mcp_endpoint():
     Endpoint MCP principal - Reçoit les requêtes JSON-RPC 2.0
     Supporte: tools/list, tools/call
     """
+    # Log de la requête entrante
+    logger.info(f"[HTTP] POST /mcp - Requête reçue de {request.remote_addr}")
+    logger.info(f"[HTTP] Headers: {dict(request.headers)}")
+
     try:
         data = request.get_json()
+        logger.info(f"[HTTP] Body: {data}")
 
         if not data:
+            logger.error(f"[HTTP] Erreur: JSON invalide")
             return jsonify(make_jsonrpc_error(None, -32700, "Parse error: Invalid JSON")), 400
 
         jsonrpc = data.get("jsonrpc")
         if jsonrpc != "2.0":
+            logger.error(f"[HTTP] Erreur: jsonrpc != 2.0")
             return jsonify(make_jsonrpc_error(data.get("id"), -32600, "Invalid Request: jsonrpc must be '2.0'")), 400
 
         method = data.get("method")
         request_id = data.get("id")
         params = data.get("params", {})
+
+        logger.info(f"[MCP] Méthode: {method}, ID: {request_id}")
 
         # Router vers le bon handler
         if method == "tools/list":
@@ -203,11 +250,14 @@ def mcp_endpoint():
         elif method == "tools/call":
             response = handle_tools_call(request_id, params)
         else:
+            logger.warning(f"[MCP] Méthode inconnue: {method}")
             response = make_jsonrpc_error(request_id, -32601, f"Method not found: {method}")
 
+        logger.info(f"[HTTP] Réponse envoyée")
         return jsonify(response)
 
     except Exception as e:
+        logger.error(f"[HTTP] Erreur interne: {str(e)}")
         return jsonify(make_jsonrpc_error(None, -32603, f"Internal error: {str(e)}")), 500
 
 
@@ -215,8 +265,13 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5002))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
-    print(f"🚀 MCP Proxy SanteCall démarré sur le port {port}")
-    print(f"📍 Endpoint MCP: POST /mcp")
-    print(f"🔧 API SanteCall: {SANTECALL_API_URL}")
+    logger.info("=" * 50)
+    logger.info("MCP Proxy SanteCall - Démarrage")
+    logger.info("=" * 50)
+    logger.info(f"Port: {port}")
+    logger.info(f"Endpoint MCP: POST /mcp")
+    logger.info(f"API SanteCall: {SANTECALL_API_URL}")
+    logger.info(f"Debug: {debug}")
+    logger.info("=" * 50)
 
     app.run(host="0.0.0.0", port=port, debug=debug)

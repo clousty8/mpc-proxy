@@ -85,6 +85,28 @@ Recherche un patient par numéro de téléphone.
 - Le healthcheck Railway est désactivé dans `railway.json` pour éviter les faux positifs au démarrage
 - CORS est activé pour permettre les appels depuis n'importe quelle origine
 
+## Logging
+
+Le serveur dispose d'un système de logging complet avec timestamps. Les logs apparaissent dans Railway → Logs.
+
+### Format des logs
+```
+2026-02-03 10:41:11 [INFO] [HTTP] POST /mcp - Requête reçue de 127.0.0.1
+2026-02-03 10:41:11 [INFO] [HTTP] Headers: {...}
+2026-02-03 10:41:11 [INFO] [HTTP] Body: {...}
+2026-02-03 10:41:11 [INFO] [MCP] Méthode: tools/call, ID: 99
+2026-02-03 10:41:11 [INFO] [MCP] tools/call - Outil: search_patient, Arguments: {...}
+2026-02-03 10:41:11 [INFO] [SanteCall API] Appel avec phone=+33612345678
+2026-02-03 10:41:11 [INFO] [SanteCall API] Réponse status=200
+2026-02-03 10:41:11 [INFO] [MCP] search_patient - Succès pour +33612345678
+2026-02-03 10:41:11 [INFO] [HTTP] Réponse envoyée
+```
+
+### Tags de log
+- `[HTTP]` : Requêtes/réponses HTTP
+- `[MCP]` : Traitement des méthodes MCP (tools/list, tools/call)
+- `[SanteCall API]` : Appels vers l'API SanteCall
+
 ## Problèmes connus et solutions
 
 ### Le healthcheck Railway échoue
