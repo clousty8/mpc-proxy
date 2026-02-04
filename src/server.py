@@ -189,44 +189,20 @@ def handle_tools_call(request_id, params):
                 "isError": True
             })
 
-        # MODE TEST: Réponse en dur pour tester si le problème vient du timeout
-        # TODO: Réactiver l'appel API une fois le problème confirmé/résolu
-        logger.info(f"[MCP] search_patient - MODE TEST: Réponse en dur pour {phone}")
-
-        fake_response = (
-            f"Patient trouvé: Madame Marie DUPONT. "
-            f"Email: marie.dupont@example.com. "
-            f"Téléphone recherché: {phone}. "
-            f"Ce patient a 2 rendez-vous programmés: "
-            f"- 2026-03-15 à 10h00 avec Dr Martin pour Consultation. "
-            f"- 2026-03-22 à 14h30 avec Dr Durand pour Contrôle. "
-            f"Actions possibles: confirmer un RDV, annuler un RDV, prendre un nouveau RDV."
-        )
-
-        return make_jsonrpc_response(request_id, {
-            "content": [
-                {
-                    "type": "text",
-                    "text": fake_response
-                }
-            ]
-        })
-
-        # --- CODE ORIGINAL (désactivé pour test) ---
-        # try:
-        #     data = call_santecall_api(phone)
-        #     formatted_response = format_patient_response(data)
-        #     logger.info(f"[MCP] search_patient - Succès pour {phone}")
-        #     logger.info(f"[MCP] Réponse: {formatted_response[:200]}...")
-        #     return make_jsonrpc_response(request_id, {
-        #         "content": [{"type": "text", "text": formatted_response}]
-        #     })
-        # except Exception as e:
-        #     logger.error(f"[MCP] search_patient - Erreur: {str(e)}")
-        #     return make_jsonrpc_response(request_id, {
-        #         "content": [{"type": "text", "text": f"Erreur lors de la recherche: {str(e)}"}],
-        #         "isError": True
-        #     })
+        try:
+            data = call_santecall_api(phone)
+            formatted_response = format_patient_response(data)
+            logger.info(f"[MCP] search_patient - Succès pour {phone}")
+            logger.info(f"[MCP] Réponse: {formatted_response[:200]}...")
+            return make_jsonrpc_response(request_id, {
+                "content": [{"type": "text", "text": formatted_response}]
+            })
+        except Exception as e:
+            logger.error(f"[MCP] search_patient - Erreur: {str(e)}")
+            return make_jsonrpc_response(request_id, {
+                "content": [{"type": "text", "text": f"Erreur lors de la recherche: {str(e)}"}],
+                "isError": True
+            })
     else:
         logger.warning(f"[MCP] Outil inconnu: {tool_name}")
         return make_jsonrpc_error(request_id, -32602, f"Outil inconnu: {tool_name}")
