@@ -50,10 +50,6 @@ TOOLS = [
                 "phone": {
                     "type": "string",
                     "description": "Numéro de téléphone du patient (format international, ex: +33678951483)"
-                },
-                "volubile_id": {
-                    "type": "string",
-                    "description": "ID du cabinet (optionnel, utilise la valeur par défaut si non fourni)"
                 }
             },
             "required": ["phone"]
@@ -83,14 +79,14 @@ def make_jsonrpc_error(id, code, message):
     }
 
 
-def call_santecall_api(phone, volubile_id=None):
+def call_santecall_api(phone):
     """Appelle l'API SanteCall et retourne les données du patient"""
-    logger.info(f"[SanteCall API] Appel avec phone={phone}, volubile_id={volubile_id or DEFAULT_VOLUBILE_ID}")
+    logger.info(f"[SanteCall API] Appel avec phone={phone}, volubile_id={DEFAULT_VOLUBILE_ID}")
 
     params = {
         "phone": phone,
         "token": SANTECALL_TOKEN,
-        "volubile_id": volubile_id or DEFAULT_VOLUBILE_ID
+        "volubile_id": DEFAULT_VOLUBILE_ID
     }
 
     try:
@@ -217,9 +213,8 @@ def handle_tools_call(request_id, params):
         })
 
         # --- CODE ORIGINAL (désactivé pour test) ---
-        # volubile_id = arguments.get("volubile_id")
         # try:
-        #     data = call_santecall_api(phone, volubile_id)
+        #     data = call_santecall_api(phone)
         #     formatted_response = format_patient_response(data)
         #     logger.info(f"[MCP] search_patient - Succès pour {phone}")
         #     logger.info(f"[MCP] Réponse: {formatted_response[:200]}...")
